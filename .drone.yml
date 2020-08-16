@@ -1,0 +1,21 @@
+kind: pipeline
+name: Baka-CI-Build-Project
+
+platform:
+  os: linux
+  arch: amd64
+
+clone:
+  depth: 1
+
+steps:
+- name: Baka-CI-Build-Project
+  image: nicklas373/oven:latest
+  environment:
+    TELEGRAM_BOT:
+        from_secret: TELEGRAM_BOT
+    TELEGRAM_GROUP:
+        from_secret: TELEGRAM_GROUP
+  commands:
+    - chmod a+x build/build_kernel.sh
+    - bash build/build_kernel.sh

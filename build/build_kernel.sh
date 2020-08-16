@@ -1,0 +1,199 @@
+#!bin/bash
+# Copyright 2019, Ahmad Thoriq Najahi "Najahiii" <najahiii@outlook.co.id>
+# Copyright 2019, alanndz <alanmahmud0@gmail.com>
+# Copyright 2020, Dicky Herlambang "Nicklas373" <herlambangdicky5@gmail.com>
+# Copyright 2016-2020, HANA-CI Build Project
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# Kernel host environment
+export KBUILD_BUILD_USER=unknownbaka
+export KBUILD_BUILD_HOST=Drone-CI
+export ARCH=arm64
+export TZ=CST-8
+
+# Kernel directory environment
+BUILD_GCC=0
+BUILD_CLANG=2
+IMAGE="$(pwd)/out/arch/arm64/boot/Image.gz-dtb"
+KERNEL="$(pwd)"
+KERNEL_TEMP="$(pwd)/TEMP"
+KERNEL_BOT=Baka-CI
+KERNEL_DATE="$(date +%Y%m%d-%H%M)"
+
+# Telegram Bot
+TELEGRAM_BOT_ID=${TELEGRAM_BOT}
+TELEGRAM_GROUP_ID=${TELEGRAM_GROUP}
+TELEGRAM_FILENAME="${KERNEL_NAME}-${CODENAME}-${KERNEL_DATE}.zip"
+
+# Telegram Bot Service || Compiling Notification
+function bot_template() {
+curl -s -X POST https://api.telegram.org/bot${TELEGRAM_BOT_ID}/sendMessage -d chat_id=${TELEGRAM_GROUP_ID} -d "parse_mode=HTML" -d text="$(
+            for POST in "${@}"; do
+                echo "${POST}"
+            done
+          )"
+}
+
+# Create Temporary Folder
+mkdir TEMP
+
+# Build environment
+apt-get update -qq && apt-get upgrade -y && apt-get install --no-install-recommends -y bc binutils binutils-aarch64-linux-gnu binutils-arm-linux-gnueabi bison flex g++ gcc libssl-dev make patch subversion gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
+
+# Clang environment
+if [ "$BUILD_CLANG" = "1" ]; then
+    git clone --depth=1 https://github.com/kdrag0n/proton-clang.git proton-clang
+    export CLANG_PATH=$(pwd)/proton-clang/bin
+    export PATH=${CLANG_PATH}:${PATH}
+    export LD_LIBRARY_PATH="$(pwd)/proton-clang/bin/../lib:$PATH"
+    #rm $CLANG_PATH/ld $CLANG_PATH/as
+elif [ "$BUILD_CLANG" = "2" ]; then
+    sh google_clang.sh
+    export CLANG_PATH=$(pwd)/clang/bin
+    export PATH=${CLANG_PATH}:${PATH}
+    export LD_LIBRARY_PATH="$(pwd)/clang/bin/../lib:$PATH"
+elif [ "$BUILD_CLANG" = "3" ]; then
+    git clone --depth=1 https://github.com/crdroidmod/android_vendor_qcom_proprietary_llvm-arm-toolchain-ship_8.0.6.git snapdragon-llvm
+    git clone --depth=1 https://github.com/arter97/arm32-gcc.git toolchain32
+    export GCC_32_PATH=$(pwd)/toolchain32/bin
+    export CLANG_PATH=$(pwd)/snapdragon-llvm/bin
+    export PATH=${CLANG_PATH}:${GCC_32_PATH}:${PATH}
+    export LD_LIBRARY_PATH="$(pwd)/snapdragon-llvm/bin/../lib:$PATH"
+    apt-get install libtinfo5
+    patch -p1 < build/snapdragon-llvm.patch
+elif [ "$BUILD_CLANG" = "4" ]; then
+    git clone --depth=1 https://gitlab.com/jjpprrrr/prelude-clang prelude-clang
+    export CLANG_PATH=$(pwd)/prelude-clang/bin
+    export PATH=${CLANG_PATH}:${PATH}
+    export LD_LIBRARY_PATH="$(pwd)/prelude-clang/bin/../lib:$PATH"
+fi
+
+# GCC environment
+if [ "$BUILD_GCC" = "1" ]; then
+    git clone --depth=1 https://github.com/milouk/gcc-prebuilt-elf-toolchains.git toolchain
+    export GCC_PATH=$(pwd)/toolchain/aarch64-linux-elf/bin
+    export PATH=${GCC_PATH}:${PATH}
+    export CROSS_COMPILE=aarch64-linux-elf-
+elif [ "$BUILD_GCC" = "2" ]; then
+    git clone --depth=1 https://github.com/arter97/arm64-gcc.git toolchain
+    export GCC_PATH=$(pwd)/toolchain/bin
+    export PATH=${GCC_PATH}:${PATH}
+    export CROSS_COMPILE=aarch64-elf-
+fi
+
+# AnyKernel 3
+git clone --depth=1 https://github.com/unknownbaka/AnyKernel3
+
+# Import telegram bot environment
+function bot_env() {
+TELEGRAM_KERNEL_VER=$(cat ${KERNEL}/out/.config | grep Linux/arm64 | cut -d " " -f3)
+TELEGRAM_COMPILER_NAME=$(cat ${KERNEL}/out/include/generated/compile.h | grep LINUX_COMPILE_BY | cut -d '"' -f2)
+TELEGRAM_COMPILER_HOST=$(cat ${KERNEL}/out/include/generated/compile.h | grep LINUX_COMPILE_HOST | cut -d '"' -f2)
+TELEGRAM_TOOLCHAIN_VER=$(cat ${KERNEL}/out/include/generated/compile.h | grep LINUX_COMPILER | cut -d '"' -f2)
+}
+
+# Telegram bot message || first notification
+function bot_first_compile() {
+bot_template   "<b>${KERNEL_NAME} Kernel build Start!</b>" \
+                "" \
+                "<b>Device :</b><code> ${KERNEL_DEVICE} </code>" \
+                "<b>Android Version :</b><code> ${KERNEL_ANDROID_VER} </code>" \
+                "<b>Kernel Branch :</b><code> $(git -C ${KERNEL} rev-parse --abbrev-ref HEAD) </code>" \
+                "<b>Latest commit :</b><code> $(git -C ${KERNEL} --no-pager log --pretty=format:'"%h - %s (%an)"' -1) </code>"
+}
+
+# Telegram bot message || success notification
+function bot_build_success() {
+bot_env
+bot_template   "<b>${KERNEL_NAME} Kernel build Success!</b>" \
+                "" \
+                "<b>Kernel Version :</b><code> Linux ${TELEGRAM_KERNEL_VER} </code>" \
+                "<b>Kernel Host :</b><code> ${TELEGRAM_COMPILER_NAME}@${TELEGRAM_COMPILER_HOST} </code>" \
+                "<b>Kernel Toolchain :</b><code> ${TELEGRAM_TOOLCHAIN_VER} </code>" \
+                "<b>Compile Time :</b><code> $(($DIFF / 60)) minute(s) and $(($DIFF % 60)) second(s) </code>"
+}
+
+# Telegram bot message || failed notification
+function bot_build_failed() {
+bot_template   "<b>${KERNEL_NAME} Kernel build Failed!</b>" \
+                "" \
+                "<b>Compile Time :</b><code> $(($DIFF / 60)) minute(s) and $(($DIFF % 60)) second(s) </code>"
+}
+
+# Compile polaris Begin
+function run() {
+START=$(date +"%s")
+bot_first_compile
+make -s -C ${KERNEL} ${CODENAME}_defconfig O=out
+if [ "$BUILD_GCC" = "0" ]; then
+    if [ "$BUILD_CLANG" = "3" ]; then
+        make -C ${KERNEL} -j$(nproc --all) O=out \
+                        CC=clang \
+                        CROSS_COMPILE=aarch64-linux-android- \
+                        CROSS_COMPILE_ARM32=armv7-linux-androideabi- \
+                        2>&1| tee ${KERNEL_TEMP}/compile_success.log \
+                        2> tee ${KERNEL_TEMP}/compile_fail.log
+    else
+        make -C ${KERNEL} -j$(nproc --all) O=out \
+                        CC=clang \
+                        LD=ld.lld \
+                        AR=llvm-ar \
+                        NM=llvm-nm \
+                        STRIP=llvm-strip \
+                        OBJCOPY=llvm-objcopy \
+                        OBJDUMP=llvm-objdump \
+                        OBJSIZE=llvm-size \
+                        READELF=llvm-readelf \
+                        HOSTCC=clang \
+                        HOSTCXX=clang++ \
+                        HOSTAR=llvm-ar \
+                        CLANG_TRIPLE=aarch64-linux-gnu- \
+                        CROSS_COMPILE=aarch64-linux-gnu- \
+                        CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+                        2>&1| tee ${KERNEL_TEMP}/compile_success.log \
+                        2> tee ${KERNEL_TEMP}/compile_fail.log
+    fi
+elif [ "$BUILD_GCC" = "2" ]; then
+    make -C ${KERNEL} -j$(nproc --all) O=out \
+                    2>&1| tee ${KERNEL_TEMP}/compile_success.log \
+                    2> tee ${KERNEL_TEMP}/compile_fail.log
+else
+    make -C ${KERNEL} -j$(nproc --all) O=out \
+                    CROSS_COMPILE=aarch64-linux-gnu- \
+                    CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+                    2>&1| tee ${KERNEL_TEMP}/compile_success.log \
+                    2> tee ${KERNEL_TEMP}/compile_fail.log
+fi
+if ! [ -a $IMAGE ]; then
+	END=$(date +"%s")
+	DIFF=$(($END - $START))
+	bot_build_failed
+	curl -F chat_id=${TELEGRAM_GROUP_ID} -F document="@${KERNEL_TEMP}/compile_fail.log"  https://api.telegram.org/bot${TELEGRAM_BOT_ID}/sendDocument
+	exit 1
+fi
+END=$(date +"%s")
+DIFF=$(($END - $START))
+bot_build_success
+cp ${IMAGE} AnyKernel3
+anykernel
+kernel_upload
+}
+
+# AnyKernel
+function anykernel() {
+cd AnyKernel3
+sed -i "s/ExampleKernel/${KERNEL_NAME}Kernel/g" anykernel.sh
+sed -i "s/DeviceName/${KERNEL_DEVICE}/g" anykernel.sh
+sed -i "s/codename/${CODENAME}/g" anykernel.sh
+make -j$(nproc --all)
+mv Kernel.zip ${KERNEL_TEMP}/${KERNEL_NAME}-${CODENAME}-${KERNEL_DATE}.zip
+}
+
+# Upload Kernel
+function kernel_upload() {
+curl -F chat_id=${TELEGRAM_GROUP_ID} -F document="@${KERNEL_TEMP}/${KERNEL_NAME}-${CODENAME}-${KERNEL_DATE}.zip"  https://api.telegram.org/bot${TELEGRAM_BOT_ID}/sendDocument
+curl -F chat_id=${TELEGRAM_GROUP_ID} -F document="@${KERNEL_TEMP}/compile_success.log"  https://api.telegram.org/bot${TELEGRAM_BOT_ID}/sendDocument
+}
+
+# Running
+run

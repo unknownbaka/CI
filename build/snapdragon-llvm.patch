@@ -1,0 +1,40 @@
+diff --git a/kernel/Makefile b/kernel/Makefile
+--- a/kernel/Makefile
++++ b/kernel/Makefile
+@@ -765,7 +765,7 @@ KBUILD_CFLAGS += $(call cc-disable-warning, tautological-compare)
+ KBUILD_CFLAGS += $(call cc-option, -mno-global-merge,)
+ KBUILD_CFLAGS += $(call cc-option, -fcatch-undefined-behavior)
+ # Variable initialization
+-KBUILD_CFLAGS += $(call clang-ifversion, -ge, 0800, -ftrivial-auto-var-init=pattern, $(call cc-option, -fsanitize=local-init,))
++KBUILD_CFLAGS += $(call clang-ifversion, -ge, 0800, $(call cc-option, -fsanitize=local-init,))
+ else
+ 
+ # These warnings generated too much noise in a regular build.
+--- a/kernel/arch/arm/Makefile
++++ b/kernel/arch/arm/Makefile
+@@ -26,6 +26,10 @@ GZFLAGS		:=-9
+ # Never generate .eh_frame
+ KBUILD_CFLAGS	+= $(call cc-option,-fno-dwarf2-cfi-asm)
+ 
++ifeq ($(cc-name),clang)
++KBUILD_CFLAGS	+= $(call cc-disable-warning, vectorizer-no-neon)
++endif
++
+ # Do not use arch/arm/defconfig - it's always outdated.
+ # Select a platform tht is kept up-to-date
+ KBUILD_DEFCONFIG := versatile_defconfig
+diff --git a/kernel/arch/arm64/kernel/vdso32/Makefile b/kernel/arch/arm64/kernel/vdso32/Makefile
+--- a/kernel/arch/arm64/kernel/vdso32/Makefile
++++ b/kernel/arch/arm64/kernel/vdso32/Makefile
+@@ -98,6 +98,11 @@ VDSO_CFLAGS += -D__uint128_t='void*'
+ VDSO_CFLAGS += $(call cc32-disable-warning,shift-count-overflow)
+ VDSO_CFLAGS += -Wno-int-to-pointer-cast
+ 
++ifeq ($(cc-name),clang)
++# Snapdragon LLVM specific warning
++VDSO_CFLAGS += $(call cc32-disable-warning, vectorizer-no-neon)
++endif
++
+ ifdef CONFIG_MACH_XIAOMI_MSM8953
+ VDSO_CFLAGS += -mcpu=cortex-a53 -Wa,-mcpu=cortex-a53 -mtune=cortex-a53
+ endif

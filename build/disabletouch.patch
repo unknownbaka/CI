@@ -1,0 +1,42 @@
+diff --git a/kernel/arch/arm64/configs/mido_defconfig b/kernel/arch/arm64/configs/mido_defconfig
+--- a/kernel/arch/arm64/configs/mido_defconfig
++++ b/kernel/arch/arm64/configs/mido_defconfig
+@@ -349,7 +349,7 @@ CONFIG_INPUT_JOYSTICK=y
+ CONFIG_INPUT_TOUCHSCREEN=y
+ # CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_v26 is not set
+ # CONFIG_TOUCHSCREEN_SYNAPTICS_DSX is not set
+-CONFIG_TOUCHSCREEN_FT5435=y
++# CONFIG_TOUCHSCREEN_FT5435 is not set
+ CONFIG_TOUCHSCREEN_IST3038C=y
+ CONFIG_TOUCHSCREEN_GT9XX_v24=y
+ CONFIG_TOUCHSCREEN_GT9XX_v24_UPDATE=y
+ 
+diff --git a/kernel/drivers/power/supply/qcom/qpnp-smbcharger.c b/kernel/drivers/power/supply/qcom/qpnp-smbcharger.c
+--- a/kernel/drivers/power/supply/qcom/qpnp-smbcharger.c
++++ b/kernel/drivers/power/supply/qcom/qpnp-smbcharger.c
+@@ -4794,7 +4794,6 @@ static int smbchg_restricted_charging(struct smbchg_chip *chip, bool enable)
+ 
+ #ifdef CONFIG_MACH_XIAOMI_C6
+ extern void ist30xx_set_ta_mode(bool mode);
+-extern void tpd_usb_plugin(bool mode);
+ extern void gtp_usb_plugin(bool mode);
+ int set_usb_charge_mode_par = 0;
+ #endif
+@@ -4808,8 +4807,6 @@ static void handle_usb_removal(struct smbchg_chip *chip)
+ 	if (set_usb_charge_mode_par == 1)
+ 		ist30xx_set_ta_mode(0);
+ 	else if (set_usb_charge_mode_par == 2)
+-		tpd_usb_plugin(0);
+-	else if (set_usb_charge_mode_par == 3)
+ 		gtp_usb_plugin(0);
+ #endif
+ 
+@@ -4886,8 +4883,6 @@ static void handle_usb_insertion(struct smbchg_chip *chip)
+ 	if (set_usb_charge_mode_par == 1)
+ 		ist30xx_set_ta_mode(1);
+ 	else if (set_usb_charge_mode_par == 2)
+-		tpd_usb_plugin(1);
+-	else if (set_usb_charge_mode_par == 3)
+ 		gtp_usb_plugin(1);
+ #endif
+ 

@@ -1,0 +1,35 @@
+diff --git a/kernel/Makefile b/kernel/Makefile
+--- a/kernel/Makefile
++++ b/kernel/Makefile
+@@ -373,19 +373,7 @@ LINUXINCLUDE := \
+ 
+ # Use arch specific optimization
+ KBUILD_CFLAGS += \
+-		-fdiagnostics-color \
+-		-fgraphite \
+-		-fgraphite-identity \
+-		-fira-loop-pressure \
+-		-floop-block \
+-		-floop-strip-mine \
+-		-fmodulo-sched \
+-		-fmodulo-sched-allow-regmoves \
+-		-fshrink-wrap-separate \
+-		-ftree-vectorize \
+-		-mcpu=cortex-a57.cortex-a53 \
+-		-mtune=cortex-a57.cortex-a53 \
+-		-Wl,-O3,--sort-common,--strip-debug
++		-O3
+ 
+ # Read KERNELRELEASE from include/config/kernel.release (if it exists)
+ KERNELRELEASE = $(shell cat include/config/kernel.release 2> /dev/null)
+@@ -596,8 +584,8 @@ KBUILD_CPPFLAGS += -Ofast
+ endif
+ 
+ ifdef CONFIG_LTO
+-LTO_CFLAGS := -flto -flto=jobserver -fno-fat-lto-objects -fuse-linker-plugin -fwhole-program
+-KBUILD_CFLAGS += $(LTO_CFLAGS) --param=max-inline-insns-auto=1000
++LTO_CFLAGS := -flto -flto=jobserver
++KBUILD_CFLAGS += $(LTO_CFLAGS)
+ LTO_LDFLAGS := $(LTO_CFLAGS) -Wno-lto-type-mismatch -Wno-psabi -Wno-stringop-overflow -flinker-output=nolto-rel
+ LDFINAL := $(CONFIG_SHELL) $(srctree)/scripts/gcc-ld $(LTO_LDFLAGS)
+ AR := $(CROSS_COMPILE)gcc-ar

@@ -1,0 +1,21 @@
+diff --git a/kernel/scripts/setlocalversion b/kernel/scripts/setlocalversion
+--- a/kernel/scripts/setlocalversion
++++ b/kernel/scripts/setlocalversion
+@@ -63,7 +63,7 @@ scm_version()
+ 
+ 			# If we don't have a tag at all we print -{commitish}.
+ 			else
+-				printf '%s%s' "-" $head
++				printf '%s%s'
+ 			fi
+ 		fi
+ 
+@@ -82,7 +82,7 @@ scm_version()
+ 			git --no-optional-locks status -uno --porcelain 2>/dev/null ||
+ 			git diff-index --name-only HEAD
+ 		} | grep -qvE '^(.. )?scripts/package'; then
+-			printf '%s' "++"
++			printf '%s'
+ 		fi
+ 
+ 		# All done with git

@@ -7,14 +7,14 @@
 
 # Kernel host environment
 export KBUILD_BUILD_USER=unknownbaka
-export KBUILD_BUILD_HOST=Drone-CI
+export KBUILD_BUILD_HOST=Coolapk
 export ARCH=arm64
 export TZ=CST-8
 
 # Kernel directory environment
-BUILD_GCC=0
-BUILD_CLANG=2
-BUILD_KERNEL=7
+BUILD_GCC=3
+BUILD_CLANG=0
+BUILD_KERNEL=8
 CODENAME="mido"
 IMAGE="$(pwd)/kernel/out/arch/arm64/boot/Image.gz-dtb"
 KERNEL="$(pwd)/kernel"
@@ -23,10 +23,13 @@ KERNEL_DEVICE="Redmi Note 4x"
 KERNEL_BOT=Baka-CI
 KERNEL_DATE="$(date +%Y%m%d-%H%M)"
 KERNEL_ANDROID_VER="Q"
+if [ "$BUILD_KERNEL" = "8" ]; then
+    KERNEL_ANDROID_VER="N"
+fi
 
 # Telegram Bot
 TELEGRAM_BOT_ID=${TELEGRAM_BOT}
-TELEGRAM_GROUP_ID=${TELEGRAM_GROUP}
+TELEGRAM_GROUP_ID="-1002702442331"
 TELEGRAM_FILENAME="${KERNEL_NAME}-${CODENAME}-${KERNEL_DATE}.zip"
 
 # Telegram Bot Service || Compiling Notification
@@ -42,7 +45,7 @@ curl -s -X POST https://api.telegram.org/bot${TELEGRAM_BOT_ID}/sendMessage -d ch
 mkdir TEMP
 
 # Build environment
-apt-get update -qq && apt-get upgrade -y && apt-get install --no-install-recommends -y bc binutils binutils-aarch64-linux-gnu binutils-arm-linux-gnueabi bison flex g++ gcc libssl-dev make patch subversion gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
+apt-get update -qq && apt-get upgrade -y && apt-get install --no-install-recommends -y bc binutils binutils-aarch64-linux-gnu binutils-arm-linux-gnueabi bison flex gcc libssl-dev make patch subversion ca-certificates curl git tar unzip wget zip zstd
 
 # Clang environment
 if [ "$BUILD_CLANG" = "1" ]; then
@@ -81,7 +84,14 @@ elif [ "$BUILD_GCC" = "2" ]; then
     export GCC_PATH=$(pwd)/toolchain/bin
     export GCC_32_PATH=$(pwd)/toolchain32/bin
     export PATH=${GCC_PATH}:${GCC_32_PATH}:${PATH}
-    export CROSS_COMPILE=aarch64-elf-
+    export CROSS_COMPILE=aarch64-none-elf-
+elif [ "$BUILD_GCC" = "3" ]; then
+    git clone --depth=1 https://github.com/KudProject/aarch64-linux-android-4.9.git toolchain
+    #git clone --depth=1 https://github.com/arter97/arm32-gcc.git toolchain32
+    export GCC_PATH=$(pwd)/toolchain/bin
+    #export GCC_32_PATH=$(pwd)/toolchain32/bin
+    export PATH=${GCC_PATH}:${PATH}#:${GCC_32_PATH}
+    export CROSS_COMPILE=aarch64-linux-android-
 fi
 
 # Kernel environment
@@ -126,6 +136,11 @@ elif [ "$BUILD_KERNEL" = "7" ]; then
     KERNEL_SCHED="EAS"
     git clone --depth=1 https://github.com/zeelog/android_kernel_xiaomi_mido ${KERNEL}
     patch -p1 < build/disabletouch.patch
+elif [ "$BUILD_KERNEL" = "8" ]; then
+    KERNEL_NAME="Octopus"
+    KERNEL_SCHED="HMP"
+    git clone --depth=1 https://github.com/unknownbaka/octopus_miui_mido.git ${KERNEL}
+    #patch -p1 < build/disabletouch.patch
 fi
 
 # AnyKernel 3
@@ -204,7 +219,11 @@ bot_first_compile
 if [ "$?" != "0" ]; then
 	bot_first_compile_
 fi
-make -s -C ${KERNEL} ${CODENAME}_defconfig O=out
+if [ "$BUILD_KERNEL" = "8" ]; then
+    make -s -C ${KERNEL} octopus_defconfig O=out
+else
+    make -s -C ${KERNEL} ${CODENAME}_defconfig O=out
+fi
 if [ "$BUILD_GCC" = "0" ]; then
     if [ "$BUILD_CLANG" = "3" ]; then
         make -C ${KERNEL} -j$(nproc --all) O=out \
@@ -232,7 +251,7 @@ if [ "$BUILD_GCC" = "0" ]; then
                         2>&1| tee ${KERNEL_TEMP}/compile_success.log \
                         2> tee ${KERNEL_TEMP}/compile_fail.log
     fi
-elif [ "$BUILD_GCC" = "2" ]; then
+elif [ "$BUILD_GCC" = "3" ]; then
     make -C ${KERNEL} -j$(nproc --all) O=out \
                     2>&1| tee ${KERNEL_TEMP}/compile_success.log \
                     2> tee ${KERNEL_TEMP}/compile_fail.log
@@ -255,6 +274,9 @@ DIFF=$(($END - $START))
 bot_complete_compile
 bot_build_success
 cp ${IMAGE} AnyKernel3
+if [ "$BUILD_KERNEL" = "8" ]; then
+    cp ${IMAGE} ${KERNEL}/AnyKernel3
+fi
 anykernel
 kernel_upload
 }
@@ -262,11 +284,20 @@ kernel_upload
 # AnyKernel
 function anykernel() {
 cd AnyKernel3
-sed -i "s/kernel.string=Kernel/kernel.string=${KERNEL_NAME} Kernel/g" anykernel.sh
-sed -i "s/do.refresh_rate=/do.refresh_rate=67/g" anykernel.sh
+
+if [ "$BUILD_KERNEL" = "8" ]; then
+    cd ${KERNEL}/AnyKernel3
+    aarch64-linux-android-strip -g ${KERNEL}/out/drivers/staging/prima/wlan.ko
+    mkdir -p modules/system/lib/modules/pronto
+    cp ${KERNEL}/out/drivers/staging/prima/wlan.ko modules/system/lib/modules/pronto/pronto_wlan.ko
+fi
+
+cd ${KERNEL}/AnyKernel3
+#sed -i "s/kernel.string=Kernel/kernel.string=${KERNEL_NAME} Kernel/g" anykernel.sh
+#sed -i "s/do.refresh_rate=/do.refresh_rate=67/g" anykernel.sh
 #sed -i "s/do.cpu_offset=/do.cpu_offset=-60/g" anykernel.sh
 make -j$(nproc --all)
-mv Kernel-mido.zip  ${KERNEL_TEMP}/${KERNEL_NAME}-${CODENAME}-${KERNEL_DATE}.zip
+mv Kernel.zip  ${KERNEL_TEMP}/${KERNEL_NAME}-${CODENAME}-${KERNEL_DATE}.zip
 }
 
 # Upload Kernel
@@ -278,5 +309,3 @@ curl -F chat_id=${TELEGRAM_GROUP_ID} -F document="@${KERNEL}/out/include/generat
 
 # Running
 run
-ls /usr/bin | grep gcc
-fi

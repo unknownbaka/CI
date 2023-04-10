@@ -41,6 +41,12 @@ curl -s -X POST https://api.telegram.org/bot${TELEGRAM_BOT_ID}/sendMessage -d ch
 # Create Temporary Folder
 mkdir TEMP
 
+dpkg --add-architecture i386
+apt-get update -qq && apt-get install --no-install-recommends git libtool-bin cmake libproxy-dev uuid-dev liblzo2-dev autoconf automake bash bison bzip2 diffutils file flex m4 g++ gawk groff-base libncurses-dev libtool libslang2 make patch perl pkg-config shtool subversion tar texinfo zlib1g zlib1g-dev gettext libexpat1-dev libssl-dev cvs gperf unzip libxml-parser-perl gcc-multilib libxml2-dev g++-multilib libncurses5 mtd-utils libncurses5-dev libvorbis-dev git autopoint autogen sed build-essential intltool libelf1:i386 libglib2.0-dev xutils-dev lib32z1-dev lib32stdc++6 xsltproc gtk-doc-tools
+git clone --depth=1 https://github.com/unknownbaka/Asuswrt-K2P
+cd Asuswrt-K2P && sh build.sh && mv release/src-rt-9.x/src/image/$(ls release/src-rt-9.x/src/image/ | grep 52272 | grep trx) ${KERNEL_TEMP}/
+
+if [ "$BUILD_KERNEL" == "0" ]; then
 # Build environment
 apt-get update -qq && apt-get install --no-install-recommends -y bc binutils binutils-aarch64-linux-gnu binutils-arm-linux-gnueabi bison flex g++ gcc libssl-dev make patch subversion gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi ca-certificates curl git tar unzip wget zip zstd
 
@@ -256,3 +262,5 @@ curl -F chat_id=${TELEGRAM_GROUP_ID} -F document="@${KERNEL_TEMP}/compile_succes
 
 # Running
 run
+fi
+

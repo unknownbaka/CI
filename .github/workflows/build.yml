@@ -32,11 +32,10 @@ jobs:
         if: success()
         id: prepareArtifact
         run: |
-          ReleaseName=`ls TEMP/*.zip | awk -F '(/|.zip)' '{print $2}'` && echo "ReleaseName=$ReleaseName" >> $GITHUB_OUTPUT
-          unzip TEMP/*.zip -d Final
+          ReleaseName=`ls TEMP` && echo "ReleaseName=$ReleaseName" >> $GITHUB_OUTPUT
 
       - uses: actions/upload-artifact@v3
         name: Upload
         with:
           name: ${{ steps.prepareArtifact.outputs.ReleaseName }}
-          path: "Final/*"
+          path: "TEMP/*"

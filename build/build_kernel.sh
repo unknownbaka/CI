@@ -52,7 +52,7 @@ if [ "$BUILD_CLANG" = "1" ]; then
     export LD_LIBRARY_PATH="$(pwd)/proton-clang/bin/../lib:$PATH"
     #rm $CLANG_PATH/ld $CLANG_PATH/as
 elif [ "$BUILD_CLANG" = "2" ]; then
-    wget -q https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/master/clang-r487747.tar.gz -O google-clang.tar.gz
+    wget -q https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/master/clang-r510928.tar.gz -O google-clang.tar.gz
     mkdir google-clang && tar -xzvf google-clang.tar.gz -C google-clang > /dev/null
     export CLANG_PATH=$(pwd)/google-clang/bin
     export PATH=${CLANG_PATH}:${PATH}

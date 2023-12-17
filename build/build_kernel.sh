@@ -102,6 +102,7 @@ elif [ "$BUILD_KERNEL" = "2" ]; then
     KERNEL_BRANCH="staging"
     KERNEL_SCHED="EAS"
     git clone --depth=1 -b ${KERNEL_BRANCH} https://github.com/unknownbaka/utopia_kernel_polaris ${KERNEL}
+    sed -i "/CONFIG_CC_WERROR/d" ${KERNEL}/arch/arm64/configs/polaris_defconfig
     # cd ${KERNEL} && git submodule init && git submodule update && cd ..
 fi
 

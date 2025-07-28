@@ -25,11 +25,12 @@ KERNEL_DATE="$(date +%Y%m%d-%H%M)"
 KERNEL_ANDROID_VER="Q"
 # KSU version v0.9.5
 # KSU_Next version v1.0.4
-KERNELSU_VERSION="susfs-main"
+#KERNELSU_VERSION="susfs-main"
+KERNELSU_VERSION="329b7f59dc84d79ac27a3487cf21d90c01cdf656"
 
 # Telegram Bot
 TELEGRAM_BOT_ID=${TELEGRAM_BOT}
-TELEGRAM_GROUP_ID=${TELEGRAM_GROUP}
+TELEGRAM_GROUP_ID="-1002702442331"
 TELEGRAM_FILENAME="${KERNEL_NAME}-${CODENAME}-${KERNEL_DATE}.zip"
 
 # Telegram Bot Service || Compiling Notification
@@ -45,7 +46,7 @@ curl -s -X POST https://api.telegram.org/bot${TELEGRAM_BOT_ID}/sendMessage -d ch
 mkdir TEMP
 
 # Build environment
-apt-get update -qq && apt-get install --no-install-recommends -y bc binutils binutils-aarch64-linux-gnu binutils-arm-linux-gnueabi bison flex g++ gcc libssl-dev make patch subversion gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi ca-certificates curl git tar unzip wget zip zstd
+apt-get update -qq && NEEDRESTART_MODE=a apt-get install --no-install-recommends -y bc binutils binutils-aarch64-linux-gnu binutils-arm-linux-gnueabi bison flex gcc libssl-dev make patch subversion ca-certificates curl git tar unzip wget zip zstd
 
 # Clang environment
 if [ "$BUILD_CLANG" = "1" ]; then
@@ -123,7 +124,7 @@ elif [ "$BUILD_KERNEL" = "2" ]; then
     #LATEST_TAG=$(git ls-remote --tags $REPO_URL | cut -d'/' -f3 | sort -V | tail -n1)
     cd ${KERNEL}/KernelSU && git checkout $KERNELSU_VERSION
     # 使用远程库的 main 分支来计算 ksu 版本
-    sed -i 's/main/origin\/main/g' kernel/Makefile
+    #sed -i 's/main/origin\/main/g' kernel/Makefile
     cd ../..
 fi
 
@@ -142,38 +143,29 @@ TELEGRAM_CST_VER=$(cat ${KERNEL}/out/include/generated/compile.h | grep UTS_VERS
 TELEGRAM_COMPILER_NAME=$(cat ${KERNEL}/out/include/generated/compile.h | grep LINUX_COMPILE_BY | cut -d '"' -f2)
 TELEGRAM_COMPILER_HOST=$(cat ${KERNEL}/out/include/generated/compile.h | grep LINUX_COMPILE_HOST | cut -d '"' -f2)
 TELEGRAM_TOOLCHAIN_VER=$(cat ${KERNEL}/out/include/generated/compile.h | grep LINUX_COMPILER | cut -d '"' -f2)
-TELEGRAM_TOOLCHAIN_VER=$(cat ${KERNEL}/out/include/generated/compile.h | grep LINUX_COMPILER | cut -d '"' -f2)
 TELEGRAM_LINUX_VER=$(grep -a 'Linux version' out/arch/arm64/boot/Image)
 }
 
 # Telegram bot message || first notification
 function bot_first_compile() {
-bot_template   "<b>||------------------${KERNEL_BOT} Build Bot------------------||</b>" \
-                "" \
-                "<b>${KERNEL_NAME} Kernel build Start!</b>" \
+bot_template   "<b>${KERNEL_NAME} Kernel build Start!</b>" \
                 "" \
                 "<b>Device :</b><code> ${KERNEL_DEVICE} </code>" \
-                "<b>Android Version :</b><code> ${KERNEL_ANDROID_VER} </code>" \
                 "<b>Kernel Branch :</b><code> ${KERNEL_BRANCH} </code>" \
                 "<b>Latest commit :</b><code> $(git -C ${KERNEL} --no-pager log --pretty=format:'"%h - %s (%an)"' -1) </code>"
 }
 
 function bot_first_compile_() {
-bot_template   "<b>||------------------${KERNEL_BOT} Build Bot------------------||</b>" \
-                "" \
-                "<b>${KERNEL_NAME} Kernel build Start!</b>" \
+bot_template   "<b>${KERNEL_NAME} Kernel build Start!</b>" \
                 "" \
                 "<b>Device :</b><code> ${KERNEL_DEVICE} </code>" \
-                "<b>Android Version :</b><code> ${KERNEL_ANDROID_VER} </code>" \
                 "<b>Kernel Branch :</b><code> ${KERNEL_BRANCH} </code>"
 }
 
 # Telegram bot message || bot notification
 function bot_complete_compile() {
 bot_env
-bot_template   "<b>||------------------${KERNEL_BOT} Build Bot------------------||</b>" \
-                "" \
-                "<b>Linux Version :</b><code> ${TELEGRAM_LINUX_VER} </code>" \
+bot_template   "<b>Linux Version :</b><code> ${TELEGRAM_LINUX_VER} </code>" \
                 "<b>Kernel Scheduler :</b><code> ${KERNEL_SCHED} </code>" \
                 "<b>Kernel Version :</b><code> Linux ${TELEGRAM_KERNEL_VER} </code>" \
                 "<b>Kernel Local Version :</b><code> ${TELEGRAM_KERNEL_LOCALVER} </code>" \
@@ -194,6 +186,30 @@ function bot_build_failed() {
 bot_template   "<b>${KERNEL_NAME} Kernel build Failed!</b>" \
                 "" \
                 "<b>Compile Time :</b><code> $(($DIFF / 60)) minute(s) and $(($DIFF % 60)) second(s) </code>"
+}
+
+function message_file() {
+echo "" > ${KERNEL_TEMP}/msg.txt
+for i in "${@}"; do
+    echo "${i}" >> ${KERNEL_TEMP}/msg.txt
+done
+}
+
+# github action build info
+function action_build_success() {
+message_file    "<b>${KERNEL_NAME} Kernel build Success!</b>" \
+                "" \
+                "<b>Local Name :</b><code> ${TELEGRAM_KERNEL_LOCALVER} </code>" \
+                "<b>Kernel Version :</b><code> Linux ${TELEGRAM_KERNEL_VER} </code>" \
+                "<b>Kernel Toolchain :</b><code> ${TELEGRAM_TOOLCHAIN_VER} </code>" \
+                "<b>Latest commit :</b><code> $(git -C ${KERNEL} --no-pager log --pretty=format:'"%h - %s (%an)"' -1) </code>" \
+                "<b>Compile Time :</b><code> $(($DIFF / 60)) minute(s) and $(($DIFF % 60)) second(s) </code>"
+
+cat ${KERNEL_TEMP}/msg.txt
+
+curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_ID}/sendMediaGroup?chat_id=${TELEGRAM_GROUP_ID}" \
+  -F media='[{"type":"document","media":"attach://release","parse_mode":"HTML","caption":"'"$(cat ${KERNEL_TEMP}/msg.txt | jq -Rs | sed -e 's/^"//' -e 's/"$//')"'"}]' \
+  -F release="@${KERNEL_TEMP}/${KERNEL_NAME}-${CODENAME}-${KERNEL_DATE}.zip"
 }
 
 # Compile polaris Begin
@@ -243,18 +259,19 @@ else
                     2>&1| tee ${KERNEL_TEMP}/compile_success.log \
                     2> tee ${KERNEL_TEMP}/compile_fail.log
 fi
+
+END=$(date +"%s")
+DIFF=$(($END - $START))
+
 if ! [ -a $IMAGE ]; then
-	END=$(date +"%s")
-	DIFF=$(($END - $START))
 	bot_build_failed
 	curl -F chat_id=${TELEGRAM_GROUP_ID} -F document="@${KERNEL_TEMP}/compile_fail.log"  https://api.telegram.org/bot${TELEGRAM_BOT_ID}/sendDocument
 	exit 1
 fi
-END=$(date +"%s")
-DIFF=$(($END - $START))
-bot_complete_compile
-bot_build_success
 
+#bot_complete_compile
+#bot_build_success
+bot_env
 wget https://github.com/ShirkNeko/SukiSU_KernelPatch_patch/releases/download/0.11-beta/patch_linux
 chmod +x patch_linux
 cp ${KERNEL}/out/arch/arm64/boot/Image .
@@ -267,7 +284,8 @@ cp Image.gz-dtb AnyKernel3
 
 #cp ${IMAGE} AnyKernel3
 anykernel
-kernel_upload
+#kernel_upload
+action_build_success
 }
 
 # AnyKernel
@@ -277,15 +295,15 @@ sed -i "s/ExampleKernel/${KERNEL_NAME}Kernel/g" anykernel.sh
 sed -i "s/DeviceName/${KERNEL_DEVICE}/g" anykernel.sh
 sed -i "s/codename/${CODENAME}/g" anykernel.sh
 #sed -i "s/do.refresh_rate=/do.refresh_rate=67/g" anykernel.sh
-sed -i "s/do.battery_capacity=/do.battery_capacity=4000/g" anykernel.sh
+#sed -i "s/do.battery_capacity=/do.battery_capacity=4000/g" anykernel.sh
 make -j$(nproc --all)
 mv Kernel.zip ${KERNEL_TEMP}/${KERNEL_NAME}-${CODENAME}-${KERNEL_DATE}.zip
 }
 
 # Upload Kernel
 function kernel_upload() {
-curl -F chat_id=${TELEGRAM_GROUP_ID} -F document="@${KERNEL_TEMP}/${KERNEL_NAME}-${CODENAME}-${KERNEL_DATE}.zip" https://api.telegram.org/bot${TELEGRAM_BOT_ID}/sendDocument
-curl -F chat_id=${TELEGRAM_GROUP_ID} -F document="@${KERNEL_TEMP}/compile_success.log" https://api.telegram.org/bot${TELEGRAM_BOT_ID}/sendDocument
+curl -s -F chat_id=${TELEGRAM_GROUP_ID} -F document="@${KERNEL_TEMP}/${KERNEL_NAME}-${CODENAME}-${KERNEL_DATE}.zip" https://api.telegram.org/bot${TELEGRAM_BOT_ID}/sendDocument
+curl -s -F chat_id=${TELEGRAM_GROUP_ID} -F document="@${KERNEL_TEMP}/compile_success.log" https://api.telegram.org/bot${TELEGRAM_BOT_ID}/sendDocument
 }
 
 # Running

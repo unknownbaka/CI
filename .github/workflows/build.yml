@@ -22,11 +22,13 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Build_Kernel
-        run:
-            sudo chmod a+x build/build_kernel.sh && sudo bash build/build_kernel.sh
+        run: |
+            sudo chmod a+x build/build_kernel.sh
+            sudo -E env \
+                TELEGRAM_BOT=$TELEGRAM_BOT \
+                bash build/build_kernel.sh
         env:
             TELEGRAM_BOT: ${{ secrets.TELEGRAM_BOT }}
-            TELEGRAM_GROUP: ${{ secrets.TELEGRAM_GROUP }}
 
       - name: Prepare artifact
         if: success()

@@ -26,7 +26,8 @@ KERNEL_ANDROID_VER="Q"
 # KSU version v0.9.5
 # KSU_Next version v1.0.4
 #KERNELSU_VERSION="susfs-main"
-KERNELSU_VERSION="329b7f59dc84d79ac27a3487cf21d90c01cdf656"
+#KERNELSU_VERSION="329b7f59dc84d79ac27a3487cf21d90c01cdf656"
+KERNELSU_VERSION="v3.2.2-10-legacy"
 
 # Telegram Bot
 TELEGRAM_BOT_ID=${TELEGRAM_BOT}
@@ -272,17 +273,17 @@ fi
 #bot_complete_compile
 #bot_build_success
 bot_env
-wget https://github.com/ShirkNeko/SukiSU_KernelPatch_patch/releases/download/0.11-beta/patch_linux
-chmod +x patch_linux
-cp ${KERNEL}/out/arch/arm64/boot/Image .
-cp ${KERNEL}/out/arch/arm64/boot/dts/qcom/*.dtb .
-./patch_linux
-mv -f oImage Image
-gzip -k Image Image.gz
-cat Image.gz *.dtb > Image.gz-dtb
-cp Image.gz-dtb AnyKernel3
+# wget https://github.com/ShirkNeko/SukiSU_KernelPatch_patch/releases/download/0.11-beta/patch_linux
+# chmod +x patch_linux
+# cp ${KERNEL}/out/arch/arm64/boot/Image .
+# cp ${KERNEL}/out/arch/arm64/boot/dts/qcom/*.dtb .
+# ./patch_linux
+# mv -f oImage Image
+# gzip -k Image Image.gz
+# cat Image.gz *.dtb > Image.gz-dtb
+# cp Image.gz-dtb AnyKernel3
 
-#cp ${IMAGE} AnyKernel3
+cp ${IMAGE} AnyKernel3
 anykernel
 #kernel_upload
 action_build_success

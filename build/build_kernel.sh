@@ -27,7 +27,8 @@ KERNEL_ANDROID_VER="Q"
 # KSU_Next version v1.0.4
 #KERNELSU_VERSION="susfs-main"
 #KERNELSU_VERSION="329b7f59dc84d79ac27a3487cf21d90c01cdf656"
-KERNELSU_VERSION="v3.2.2-10-legacy"
+#KERNELSU_VERSION="v3.2.2-10-legacy"
+KERNELSU_VERSION="v3.3.0-52"
 
 # Telegram Bot
 TELEGRAM_BOT_ID=${TELEGRAM_BOT}
@@ -58,13 +59,20 @@ if [ "$BUILD_CLANG" = "1" ]; then
     #rm $CLANG_PATH/ld $CLANG_PATH/as
 elif [ "$BUILD_CLANG" = "2" ]; then
     # Set the URL to the Android Clang/LLVM Prebuilts README
-    URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+/master/README.md"
+    #URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+/master/README.md"
     # Download the README file
-    README=$(curl -s $URL)
+    #README=$(curl -s $URL)
     # Extract the version number
-    VERSION=$(echo "$README" | grep 'clang-r' | head -1 | grep -oE 'clang-r[0-9]+' | head -1)
-    wget -q https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/master/$VERSION.tar.gz -O google-clang.tar.gz
-    mkdir google-clang && tar -xzvf google-clang.tar.gz -C google-clang > /dev/null
+    #VERSION=$(echo "$README" | grep 'clang-r' | head -1 | grep -oE 'clang-r[0-9]+' | head -1)
+    
+    # wget -q https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/master/clang-stable.tar.gz -O google-clang.tar.gz
+    # mkdir google-clang && tar -xzvf google-clang.tar.gz -C google-clang > /dev/null
+
+    git clone --depth=1 -b main-kernel https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86
+    mv linux-x86/clang-r614150 google-clang
+    rm -rf linux-x86
+    du google-clang
+
     export CLANG_PATH=$(pwd)/google-clang/bin
     export PATH=${CLANG_PATH}:${PATH}
     export LD_LIBRARY_PATH="$(pwd)/google-clang/bin/../lib:$PATH"
